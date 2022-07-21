@@ -10,7 +10,7 @@ class CONFIG(object):
     def __init__(self):
         super(CONFIG, self).__init__()
         self.dataset = 'miRNA'
-        self.seq = 'long'   #  ['long', 'short', 'ls']
+        self.seq = 'long'
         self.ngram = 4
         self.dim = 128    # BiLSTM hidden number
         self.dim_out = 38

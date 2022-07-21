@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/PMSS.iml" filepath="$PROJECT_DIR$/.idea/PMSS.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../PMMS/.idea/PMMS.iml" filepath="$PROJECT_DIR$/../PMMS/.idea/PMMS.iml" />
     </modules>
   </component>
 </project>

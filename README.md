@@ -11,4 +11,3 @@ cd code
 3. 'code/config.py' Experimental parameter setting
 4. 'dataset' Data used in the experiment
 5. 'output' Experimental output
-6. 'ResultPlot' Visualisation of results

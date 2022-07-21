@@ -22,7 +22,6 @@ class CompoundProteinInteractionPrediction(nn.Module):
     def __init__(self):
         super(CompoundProteinInteractionPrediction, self).__init__()
         self.embed_word = nn.Embedding(n_word, dim)
-        # self.W_bilstm = nn.ModuleList([nn.LSTM(input_size=dim, hidden_size=int(dim/2), bidirectional=True) for _ in range(layer_lstm)])
         self.W_bilstm = nn.LSTM(input_size=dim, hidden_size=int(dim / 2), num_layers=layer_lstm, dropout=0.1, bidirectional=True)
         self.multihead_attn = nn.MultiheadAttention(dim, num_heads)
         self.W_attention = nn.Linear(dim_out, dim_out)
@@ -33,26 +32,24 @@ class CompoundProteinInteractionPrediction(nn.Module):
 
     def attention_rnn(self, x, xs, layer):
         """The attention mechanism is applied to the last layer of RNN."""
-        xs = torch.unsqueeze(xs, 0)  # [1, n_word, dim]
-        xs, (hidden, c) = self.W_bilstm(xs)    # [1, n_word, dim]
+        xs = torch.unsqueeze(xs, 0)
+        xs, (hidden, c) = self.W_bilstm(xs)
 
-        query = xs.clone()    # [1, n_word, dim]
-        key = query    # [1, n_word, dim]
-        value = query    # [1, n_word, dim]
-        xs, attn_output_weights = self.multihead_attn(query, key, value)  # # [1, n_word, dim]
+        query = xs.clone()
+        key = query
+        value = query
+        xs, attn_output_weights = self.multihead_attn(query, key, value)
 
-        xs = torch.relu(xs)  # [1, n_word, dim]
-        xs = torch.squeeze(xs, 0)  # [n_word, dim]
-        # xs = self.hidden(xs)
-        xs = torch.relu(self.hidden(xs))  # [n_word, dim_out]
+        xs = torch.relu(xs)
+        xs = torch.squeeze(xs, 0)
+        xs = torch.relu(self.hidden(xs))
 
-        h = torch.relu(self.W_attention(x))   # [1, dim]
-        hs = torch.relu(self.W_attention(xs))   # [n_word, dim]
+        h = torch.relu(self.W_attention(x))
+        hs = torch.relu(self.W_attention(xs))
 
-        weights = torch.tanh(F.linear(h, hs))   #  [1, n_word]
-        ys = torch.t(weights) * hs     #  [n_word, dim]
+        weights = torch.tanh(F.linear(h, hs))
+        ys = torch.t(weights) * hs
 
-        # return torch.unsqueeze(torch.sum(ys, 0), 0)
         return torch.unsqueeze(torch.mean(ys, 0), 0)
 
     def forward(self, inputs):
@@ -60,10 +57,10 @@ class CompoundProteinInteractionPrediction(nn.Module):
         row_38, words = inputs
 
         """Protein vector with multi-head attention-RNN."""
-        compound_vector = row_38[None, :]    # [1, 38]
-        word_vectors = self.embed_word(words)   # [n_word, dim]
+        compound_vector = row_38[None, :]
+        word_vectors = self.embed_word(words)
 
-        protein_vector = self.attention_rnn(compound_vector, word_vectors, layer_lstm)   # [1, dim]
+        protein_vector = self.attention_rnn(compound_vector, word_vectors, layer_lstm)
 
         num = protein_vector.detach().numpy()
         num = num.flatten()
@@ -126,12 +123,10 @@ def save_Loss(Loss, filename):
         f.write('\t'.join(map(str, Loss)) + '\n')
 
 def get_feature(seq, ngram):
-    # 1.读取数据集所有特征 （原始特征）
     data = pd.read_csv("../dataset/original/process/miRNA_38.csv", header=None)
     row_feature = data.iloc[1:, 0:38].values
     miRNA_num = len(row_feature)
 
-    # 2. 读取RNN特征
     rnn_file = '../output/ebd_' + seq + '_seq/ebd--miRNA--' + seq + '--ngram' + str(ngram) +'--dim128--layer_lstm2--layer_output3--lr0.001--lr_decay0.5--decay_interval10--weight_decay1e-06--iteration100.txt'
 
     feature = []
@@ -144,7 +139,7 @@ def get_feature(seq, ngram):
             feature.append(num)
 
     rnn_feature = np.array(feature)
-    print("特征加载完毕，开始特征融合")
+    print("Feature loading complete")
 
     return row_feature, rnn_feature
 
@@ -162,19 +157,7 @@ def feature_fussion(row_feature, rnn_feature, seq, way, ngram):
     for i in range(len(row_feature)):
         row_vec = row_feature[i]
         rnn_vec = rnn_feature[i]
-        if way == '拼接':
-            fussion_vec = np.hstack((row_vec, rnn_vec))
-        elif way == '相乘':
-            fussion_vec = np.multiply(row_vec, rnn_vec)
-        elif way == '相加':
-            fussion_vec = row_vec + rnn_vec
-        elif way == '最大':
-            fussion_vec = np.maximum(row_vec, rnn_vec)
-        elif way == '平均':
-            fussion_vec = 0.5 * (row_vec + rnn_vec)
-        elif way == '点积':
-            fussion_vec = dot(row_vec, rnn_vec)
-
+        fussion_vec = np.hstack((row_vec, rnn_vec))
         miRNA_vec.append(fussion_vec)
 
     file_name = '../output/ebd_' + seq + '_seq/fusion/ngram' + str(ngram) + '_' + way + '.csv'
@@ -185,17 +168,13 @@ def feature_fussion(row_feature, rnn_feature, seq, way, ngram):
 if __name__ == "__main__":
 
     """Hyperparameters."""
-    # (DATASET, radius, ngram, dim, layer_gnn, window, layer_lstm, layer_output,
-    #  lr, lr_decay, decay_interval, weight_decay, iteration,
-    #  setting) = sys.argv[1:]
     cfg = CONFIG()
-    seq = cfg.seq    # 更改序列方式
+    seq = cfg.seq
     DATASET = cfg.dataset
     ngram = cfg.ngram
     dim = cfg.dim
     dim_out = cfg.dim_out
     num_heads = cfg.num_heads
-    # window = cfg.window
     layer_lstm = cfg.layer_rnn
     layer_output = cfg.layer_output
     lr = cfg.lr
@@ -273,8 +252,5 @@ if __name__ == "__main__":
     #-------------------------Feature Fusion-------------------------
     row_feature, rnn_feature = get_feature(seq, ngram)
     print(rnn_feature)
-    # 前38列为特征，最后一列为标签
 
-    fussion_way = ['拼接', '相乘', '相加', '最大', '平均', '点积']
-    for way in fussion_way:
-        feature_fussion(row_feature, rnn_feature, seq, way, ngram)
+    feature_fussion(row_feature, rnn_feature, seq, 'cancat', ngram)

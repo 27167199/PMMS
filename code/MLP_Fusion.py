@@ -13,7 +13,7 @@ import torch
 from torch.utils.data import DataLoader
 from keras.utils.np_utils import to_categorical
 from sklearn.metrics import f1_score, roc_auc_score, accuracy_score
-from sklearn.model_selection import KFold, train_test_split
+from sklearn.model_selection import KFold
 from config import CONFIG
 
 cfg = CONFIG()
@@ -34,8 +34,7 @@ def set_random_seed(seed):
 
 set_random_seed(1)
 
-# 原始 平均 相加 最大 点积 相乘 拼接
-x, y = load_data(seq, "拼接", ngram)
+x, y = load_data(seq, "concat", ngram)
 y = to_categorical(y, num_classes=None)
 
 kf = KFold(n_splits=5, shuffle=True, random_state=2022)
@@ -51,16 +50,8 @@ class MLP(nn.Module):
         self.hidden2 = nn.Linear(num_hidden1, num_hidden2)
         self.act2 = nn.Sigmoid()
         self.interaction = nn.Linear(num_hidden1+num_hidden2, n_outputs)
-        # self.linear_relu_stack = nn.Sequential(
-        #     nn.Linear(n_inputs, num_hidden1),
-        #     nn.ReLU(),
-        #     nn.Linear(num_hidden1, num_hidden2),
-        #     nn.ReLU(),
-        #     nn.Linear(num_hidden2, n_outputs),
-        #     nn.Sigmoid())
 
     def forward(self, x):
-        # outputs = self.linear_relu_stack(x)
         x1 = self.hidden1(x)
         x1 = self.act1(x1)
         x2 = self.hidden2(x1)
@@ -71,7 +62,6 @@ class MLP(nn.Module):
         outputs = torch.sigmoid(outputs)
 
         return outputs
-
 
 def evaluate_accuracy(X, y, model, epoch):
     prob_all = []
@@ -137,10 +127,6 @@ def train(X_train, X_test, y_train, y_test, model, loss, num_epochs, optimizer):
             % (epoch + 1, train_l_sum / batch_count, accuracy_score(pred_lable, pred_train),
                test_acc))
 
-    print("test_acc_score:", test_acc)
-    print("test_f1_score:", f1)
-    print("test_auc_score:", auc)
-
     return test_acc, f1, auc
 
 
@@ -156,7 +142,7 @@ test_auc_score = []
 result = []
 
 for k, (train_set, test_set) in enumerate(kf.split(x, y)):
-    print("第%s轮验证：" % (k + 1))
+    print("%s-th round of validation:" % (k + 1))
     X_train, X_test, y_train, y_test = x[train_set], x[test_set], y[train_set], y[test_set]
     print("train_split_rate:", len(X_train) / len(x))
 
@@ -165,9 +151,7 @@ for k, (train_set, test_set) in enumerate(kf.split(x, y)):
     test_f1_score.append(f1)
     test_auc_score.append(auc)
 
-print("test acc:")
-print("test f1:")
-print("test auc:")
+
 result.append(np.mean(test_acc_score))
 result.append(np.mean(test_f1_score))
 result.append(np.mean(test_auc_score))
